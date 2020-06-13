@@ -1,0 +1,12 @@
+{
+  "name": "firebase-grader-sync",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/programming-in-th/firebase-grader-sync.git",
+  "license": "APGL-3.0",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "firebase-admin": "^8.12.1",
+    "typescript": "^3.9.5"
+  }
+}
