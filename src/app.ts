@@ -3,6 +3,12 @@ import * as path from 'path'
 import * as fs from 'fs'
 import * as os from 'os'
 import axios from 'axios'
+import * as express from 'express'
+
+require('dotenv').config()
+
+const app = express()
+app.use(express.json())
 
 admin.initializeApp({
   credential: admin.credential.cert({
@@ -11,6 +17,7 @@ admin.initializeApp({
     privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\n/gm, '\n'),
   }),
   databaseURL: 'https://proginth.firebaseio.com/',
+  storageBucket: 'proginth.appspot.com',
 })
 
 const readCode = async (id: string, len: number) => {
@@ -38,32 +45,94 @@ const readCode = async (id: string, len: number) => {
 const query = admin
   .firestore()
   .collection('submissions')
-  .where('status', '==', 'pending')
+  .where('verdict', '==', 'Pending')
   .orderBy('timestamp', 'desc')
   .limit(1)
 
 query.onSnapshot((snapshot) => {
   snapshot.forEach(async (doc) => {
-    const SubmissionID = doc.id
+    const submissionID = doc.id
     const submission = doc.data()
 
-    const TaskID = submission.taskID
-    const taskDoc = await admin.firestore().doc(`tasks/${TaskID}`).get()
+    const taskID = submission.taskID
+    const taskDoc = await admin.firestore().doc(`tasks/${taskID}`).get()
 
     const task = taskDoc.data()
 
     const codelen = task.type === 'normal' ? 1 : task.fileName.length
 
-    const Code = await readCode(SubmissionID, codelen)
+    const code = await readCode(submissionID, codelen)
 
-    const TargLang = submission.language
+    const targLang = submission.language
 
     const temp = {
-      SubmissionID,
-      TaskID,
-      TargLang,
-      Code,
+      submissionID,
+      taskID,
+      targLang,
+      code,
     }
-    axios.post(`http://localhost:${process.env.OUTPORT}`, temp)
+    axios.post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
   })
 })
+
+app.post('/group', async (req, res) => {
+  const result = req.body
+  const id = result.SubmissionID
+
+  const docRef = admin.firestore().doc(`submissions/${id}`)
+  const data = (await docRef.get()).data()
+
+  const groups = data.groups
+  const newGroup = result.Results
+  let { memory, time, score } = data
+  score += newGroup.Score
+  let pushTmp = {
+    score: newGroup.Score,
+    fullScore: newGroup.FullScore,
+    status: [],
+  }
+  for (const testcase of newGroup.TestResults) {
+    pushTmp.status.push({
+      memory: testcase.Memory,
+      time: testcase.Time * 1000,
+      message: testcase.Message,
+      verdict: testcase.Verdict,
+    })
+    memory = Math.max(memory, testcase.Memory)
+    time = Math.max(time, testcase.Time * 1000)
+  }
+  groups.push(pushTmp)
+
+  try {
+    await docRef.update({
+      groups,
+      memory,
+      time,
+      score,
+    })
+    res.status(200)
+    res.send('Success')
+  } catch (e) {
+    res.status(400)
+    res.send('Failed To Update')
+  }
+})
+
+app.post('/message', async (req, res) => {
+  const result = req.body
+  const id = result.SubmissionID
+  const verdict = result.Message
+  const docRef = admin.firestore().doc(`submissions/${id}`)
+  try {
+    await docRef.update({
+      verdict,
+    })
+    res.status(200)
+    res.send('Success')
+  } catch (e) {
+    res.status(400)
+    res.send('Failed To Update')
+  }
+})
+
+app.listen(process.env.INPORT)

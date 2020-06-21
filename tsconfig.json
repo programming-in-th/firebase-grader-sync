@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es2015",
+        "jsx": "preserve",
+        "sourceMap": false,
+        "rootDir": "src"
+    },
+    "files": [
+        "src/app.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "**/node_modules/*"
+    ]
+}
