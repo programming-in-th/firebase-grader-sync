@@ -71,6 +71,14 @@ query.onSnapshot((snapshot) => {
       targLang,
       code,
     }
+
+    await admin.firestore().doc(`submissions/${submissionID}`).update({
+      groups: [],
+      memory: 0,
+      score: 0,
+      time: 0,
+      verdict: 'Sending',
+    })
     axios.post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
   })
 })
