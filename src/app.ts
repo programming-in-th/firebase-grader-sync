@@ -77,7 +77,7 @@ query.onSnapshot((snapshot) => {
       memory: 0,
       score: 0,
       time: 0,
-      verdict: 'Sending',
+      verdict: 'In Queue',
     })
     axios.post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
   })
