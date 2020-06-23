@@ -102,12 +102,12 @@ app.post('/group', async (req, res) => {
   for (const testcase of newGroup.TestResults) {
     pushTmp.status.push({
       memory: testcase.Memory,
-      time: testcase.Time * 1000,
+      time: testcase.Time,
       message: testcase.Message,
       verdict: testcase.Verdict,
     })
     memory = Math.max(memory, testcase.Memory)
-    time = Math.max(time, testcase.Time * 1000)
+    time = Math.max(time, testcase.Time)
   }
   groups.push(pushTmp)
 
