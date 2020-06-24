@@ -45,7 +45,7 @@ const readCode = async (id: string, len: number) => {
 const query = admin
   .firestore()
   .collection('submissions')
-  .where('verdict', '==', 'Pending')
+  .where('status', '==', 'Pending')
   .orderBy('timestamp', 'desc')
   .limit(1)
 
@@ -77,7 +77,7 @@ query.onSnapshot((snapshot) => {
       memory: 0,
       score: 0,
       time: 0,
-      verdict: 'In Queue',
+      status: 'In Queue',
     })
     axios.post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
   })
@@ -129,11 +129,11 @@ app.post('/group', async (req, res) => {
 app.post('/message', async (req, res) => {
   const result = req.body
   const id = result.SubmissionID
-  const verdict = result.Message
+  const status = result.Message
   const docRef = admin.firestore().doc(`submissions/${id}`)
   try {
     await docRef.update({
-      verdict,
+      status,
     })
     res.status(200)
     res.send('Success')
