@@ -49,69 +49,86 @@ const query = admin
   .orderBy('timestamp', 'desc')
   .limit(1)
 
-query.onSnapshot((snapshot) => {
-  snapshot.forEach(async (doc) => {
-    const submissionID = doc.id
-    const submission = doc.data()
+try {
+  query.onSnapshot((snapshot) => {
+    snapshot.forEach(async (doc) => {
+      const submissionID = doc.id
+      const submission = doc.data()
 
-    const taskID = submission.taskID
-    const taskDoc = await admin.firestore().doc(`tasks/${taskID}`).get()
+      console.log(`Receive Snapshot with ID ${submissionID}: `, submission)
 
-    const task = taskDoc.data()
+      const taskID = submission.taskID
+      const taskDoc = await admin.firestore().doc(`tasks/${taskID}`).get()
 
-    const codelen = task.type === 'normal' ? 1 : task.fileName.length
+      const task = taskDoc.data()
 
-    const code = await readCode(submissionID, codelen)
+      const codelen = task.type === 'normal' ? 1 : task.fileName.length
 
-    const targLang = submission.language
+      const code = await readCode(submissionID, codelen)
 
-    const temp = {
-      submissionID,
-      taskID,
-      targLang,
-      code,
-    }
+      const targLang = submission.language
 
-    await admin.firestore().doc(`submissions/${submissionID}`).update({
-      groups: [],
-      memory: 0,
-      score: 0,
-      time: 0,
-      status: 'In Queue',
+      const temp = {
+        submissionID,
+        taskID,
+        targLang,
+        code,
+      }
+      
+      console.log(`Send Submission ID ${submissionID} To Grader: `, temp)
+
+      await admin.firestore().doc(`submissions/${submissionID}`).update({
+        groups: [],
+        memory: 0,
+        score: 0,
+        time: 0,
+        status: 'In Queue',
+      })
+      axios.post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
     })
-    axios.post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
   })
-})
+} catch(e) {
+  console.log("Error: ", e)
+}
 
 app.post('/group', async (req, res) => {
-  const result = req.body
-  const id = result.SubmissionID
-
-  const docRef = admin.firestore().doc(`submissions/${id}`)
-  const data = (await docRef.get()).data()
-
-  const groups = data.groups
-  const newGroup = result.Results
-  let { memory, time, score } = data
-  score += newGroup.Score
-  let pushTmp = {
-    score: newGroup.Score,
-    fullScore: newGroup.FullScore,
-    status: [],
-  }
-  for (const testcase of newGroup.TestResults) {
-    pushTmp.status.push({
-      memory: testcase.Memory,
-      time: testcase.Time,
-      message: testcase.Message,
-      verdict: testcase.Verdict,
-    })
-    memory = Math.max(memory, testcase.Memory)
-    time = Math.max(time, testcase.Time)
-  }
-  groups.push(pushTmp)
-
   try {
+    const result = req.body
+    const id = result.SubmissionID
+    
+    console.log(`Received Group id ${id}:`, result,)
+
+    const docRef = admin.firestore().doc(`submissions/${id}`)
+    const data = (await docRef.get()).data()
+
+    const groups = data.groups
+    const newGroup = result.Results
+    let { memory, time, score } = data
+    score += newGroup.Score
+    let pushTmp = {
+      score: newGroup.Score,
+      fullScore: newGroup.FullScore,
+      status: [],
+    }
+    for (const testcase of newGroup.TestResults) {
+      pushTmp.status.push({
+        memory: testcase.Memory,
+        time: testcase.Time,
+        message: testcase.Message,
+        verdict: testcase.Verdict,
+      })
+      memory = Math.max(memory, testcase.Memory)
+      time = Math.max(time, testcase.Time)
+    }
+    groups.push(pushTmp)
+    
+    console.log('Update Data: ', {
+      groups,
+      memory,
+      time,
+      score,
+    })
+
     await docRef.update({
       groups,
       memory,
@@ -119,28 +136,37 @@ app.post('/group', async (req, res) => {
       score,
     })
     res.status(200)
-    res.send('Success')
-  } catch (e) {
+    res.send('Success').end()
+
+  } catch(e) {
+    console.log("Error: ", e);
     res.status(400)
-    res.send('Failed To Update')
+    res.send('Failed To Update').end()
   }
 })
 
 app.post('/message', async (req, res) => {
-  const result = req.body
-  const id = result.SubmissionID
-  const status = result.Message
-  const docRef = admin.firestore().doc(`submissions/${id}`)
   try {
+    const result = req.body
+    const id = result.SubmissionID
+  
+    console.log(`Receive Message ID ${id}: `, result)
+  
+    const status = result.Message
+    const docRef = admin.firestore().doc(`submissions/${id}`)
+
     await docRef.update({
       status,
     })
     res.status(200)
-    res.send('Success')
-  } catch (e) {
+    res.send('Success').end()
+
+  } catch(e) {
+    console.log("Error: ", e)
     res.status(400)
-    res.send('Failed To Update')
+    res.send('Failed To Update').end()
   }
+
 })
 
 app.listen(process.env.INPORT)
