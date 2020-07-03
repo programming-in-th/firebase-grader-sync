@@ -74,7 +74,7 @@ try {
         targLang,
         code,
       }
-      
+
       console.log(`Send Submission ID ${submissionID} To Grader: `, temp)
 
       await admin.firestore().doc(`submissions/${submissionID}`).update({
@@ -87,16 +87,16 @@ try {
       axios.post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
     })
   })
-} catch(e) {
-  console.log("Error: ", e)
+} catch (e) {
+  console.log('Error: ', e)
 }
 
 app.post('/group', async (req, res) => {
   try {
     const result = req.body
     const id = result.SubmissionID
-    
-    console.log(`Received Group id ${id}:`, result,)
+
+    console.log(`Received Group id ${id}:`, result)
 
     const docRef = admin.firestore().doc(`submissions/${id}`)
     const data = (await docRef.get()).data()
@@ -121,7 +121,7 @@ app.post('/group', async (req, res) => {
       time = Math.max(time, testcase.Time)
     }
     groups.push(pushTmp)
-    
+
     console.log('Update Data: ', {
       groups,
       memory,
@@ -137,9 +137,8 @@ app.post('/group', async (req, res) => {
     })
     res.status(200)
     res.send('Success').end()
-
-  } catch(e) {
-    console.log("Error: ", e);
+  } catch (e) {
+    console.log('Error: ', e)
     res.status(400)
     res.send('Failed To Update').end()
   }
@@ -149,9 +148,9 @@ app.post('/message', async (req, res) => {
   try {
     const result = req.body
     const id = result.SubmissionID
-  
+
     console.log(`Receive Message ID ${id}: `, result)
-  
+
     const status = result.Message
     const docRef = admin.firestore().doc(`submissions/${id}`)
 
@@ -160,13 +159,11 @@ app.post('/message', async (req, res) => {
     })
     res.status(200)
     res.send('Success').end()
-
-  } catch(e) {
-    console.log("Error: ", e)
+  } catch (e) {
+    console.log('Error: ', e)
     res.status(400)
     res.send('Failed To Update').end()
   }
-
 })
 
 app.listen(process.env.INPORT)
