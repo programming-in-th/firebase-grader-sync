@@ -102,7 +102,7 @@ app.post('/group', async (req, res) => {
 
     const updateGroup = []
 
-    for (const item of newGroup.CurrGroupResult) {
+    for (const item of newGroup.GroupResults) {
       const status = []
       for (const istatus of item.Status) {
         status.push({
