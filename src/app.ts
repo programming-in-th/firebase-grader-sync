@@ -100,8 +100,27 @@ app.post('/group', async (req, res) => {
 
     const newGroup = result.Results
 
+    const updateGroup = []
+
+    for (const item of newGroup.CurrGroupResult) {
+      const status = []
+      for (const istatus of item.Status) {
+        status.push({
+          memory: istatus.Memory,
+          message: istatus.Message,
+          time: istatus.Time,
+          verdict: istatus.Verdict,
+        })
+      }
+      updateGroup.push({
+        status,
+        score: item.Score,
+        fullScore: item.FullScore,
+      })
+    }
+
     await admin.firestore().doc(`submissions/${id}`).update({
-      groups: newGroup.CurrGroupResult,
+      groups: updateGroup,
       memory: newGroup.Memory,
       time: newGroup.Time,
       score: newGroup.Score,
