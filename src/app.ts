@@ -98,43 +98,15 @@ app.post('/group', async (req, res) => {
 
     console.log(`Received Group id ${id}:`, result)
 
-    const docRef = admin.firestore().doc(`submissions/${id}`)
-    const data = (await docRef.get()).data()
-
-    const groups = data.groups
     const newGroup = result.Results
-    let { memory, time, score } = data
-    score += newGroup.Score
-    let pushTmp = {
+
+    await admin.firestore().doc(`submissions/${id}`).update({
+      groups: newGroup.CurrGroupResult,
+      memory: newGroup.Memory,
+      time: newGroup.Time,
       score: newGroup.Score,
-      fullScore: newGroup.FullScore,
-      status: [],
-    }
-    for (const testcase of newGroup.TestResults) {
-      pushTmp.status.push({
-        memory: testcase.Memory,
-        time: testcase.Time,
-        message: testcase.Message,
-        verdict: testcase.Verdict,
-      })
-      memory = Math.max(memory, testcase.Memory)
-      time = Math.max(time, testcase.Time)
-    }
-    groups.push(pushTmp)
-
-    console.log('Update Data: ', {
-      groups,
-      memory,
-      time,
-      score,
     })
 
-    await docRef.update({
-      groups,
-      memory,
-      time,
-      score,
-    })
     res.status(200)
     res.send('Success').end()
   } catch (e) {
