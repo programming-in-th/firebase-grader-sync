@@ -26,6 +26,15 @@ const readCode = async (id: string, len: number) => {
     for (let i = 0; i < len; ++i) {
       const filePath = `submissions/${id}/${i.toString()}`
       const tempPath = path.join(os.tmpdir(), 'temp')
+      const existence = await admin.storage().bucket().file(filePath).exists()
+
+      console.log(existence[0])
+
+      if (existence[0] === false) {
+        await admin.firestore().doc(`submissions/${id}`).delete()
+        return false
+      }
+
       await admin
         .storage()
         .bucket()
@@ -65,6 +74,10 @@ try {
       const codelen = task.type === 'normal' ? 1 : task.fileName.length
 
       const code = await readCode(submissionID, codelen)
+
+      if (code === false) {
+        return
+      }
 
       const targLang = submission.language
 
