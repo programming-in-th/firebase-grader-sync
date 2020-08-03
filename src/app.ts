@@ -4,8 +4,12 @@ import * as fs from 'fs'
 import * as os from 'os'
 import axios from 'axios'
 import * as express from 'express'
+import * as Logger from 'logdna'
 
 require('dotenv').config()
+
+const apikey = process.env.API_KEY_LOGDNA
+const logger = Logger.createLogger(apikey)
 
 const app = express()
 app.use(express.json())
@@ -47,6 +51,7 @@ const readCode = async (id: string, len: number) => {
     }
     return responseCode
   } catch (error) {
+    logger.error(`Error: ${error}`)
     throw error
   }
 }
@@ -64,6 +69,7 @@ try {
       const submissionID = doc.id
       const submission = doc.data()
 
+      logger.log(`Receive Snapshot with ID ${submissionID}`)
       console.log(`Receive Snapshot with ID ${submissionID}: `, submission)
 
       const taskID = submission.taskID
@@ -88,6 +94,7 @@ try {
         code,
       }
 
+      logger.log(`Send Submission ID ${submissionID} To Grader`)
       console.log(`Send Submission ID ${submissionID} To Grader: `, temp)
 
       await admin.firestore().doc(`submissions/${submissionID}`).update({
@@ -97,10 +104,15 @@ try {
         time: 0,
         status: 'In Queue',
       })
-      axios.post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
+      await axios
+        .post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
+        .catch((e) => {
+          logger.error(`Error: ${e}`)
+        })
     })
   })
 } catch (e) {
+  logger.error(`Error: ${e}`)
   console.log('Error: ', e)
 }
 
@@ -109,6 +121,7 @@ app.post('/group', async (req, res) => {
     const result = req.body
     const id = result.SubmissionID
 
+    logger.log(`Received Group id ${id}`)
     console.log(`Received Group id ${id}:`, result)
 
     const newGroup = result.Results
@@ -142,6 +155,7 @@ app.post('/group', async (req, res) => {
     res.status(200)
     res.send('Success').end()
   } catch (e) {
+    logger.error(`Error: ${e}`)
     console.log('Error: ', e)
     res.status(400)
     res.send('Failed To Update').end()
@@ -153,6 +167,7 @@ app.post('/message', async (req, res) => {
     const result = req.body
     const id = result.SubmissionID
 
+    logger.log(`Receive Message ID ${id}: ${result}`)
     console.log(`Receive Message ID ${id}: `, result)
 
     const status = result.Message
@@ -164,10 +179,12 @@ app.post('/message', async (req, res) => {
     res.status(200)
     res.send('Success').end()
   } catch (e) {
-    console.log('Error: ', e)
+    logger.error(`Error: ${e}`)
+    // console.log('Error: ', e)
     res.status(400)
     res.send('Failed To Update').end()
   }
 })
 
+logger.log(`Start Sync Server At Port: ${process.env.INPORT}`)
 app.listen(process.env.INPORT)
