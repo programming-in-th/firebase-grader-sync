@@ -104,6 +104,14 @@ try {
         time: 0,
         status: 'In Queue',
       })
+      const userData = (await admin.firestore().doc(`users/${submission.uid}`).get()).data()
+      if(userData.passedTask[taskID] !== true) {
+        let passedTask = userData.passedTask
+        passedTask[taskID] = false;
+        await admin.firestore().doc(`users/${submission.uid}`).update({
+          passedTask,
+        })
+      }
       await axios
         .post(`http://localhost:${process.env.OUTPORT}/submit`, temp)
         .catch((e) => {
@@ -151,6 +159,20 @@ app.post('/group', async (req, res) => {
       time: newGroup.Time,
       score: newGroup.Score,
     })
+
+    const data = (await admin.firestore().doc(`submissions/${id}`).get()).data()
+
+    const fullScore = data.fullScore
+    const uid = data.uid
+
+    if(newGroup.Score === fullScore) {
+      const userData = (await admin.firestore().doc(`users/${uid}`).get()).data()
+      let passedTask = userData.passedTask
+      passedTask[data.taskID] = true
+      await admin.firestore().doc(`users/${uid}`).update({
+        passedTask,
+      })
+    }
 
     res.status(200)
     res.send('Success').end()
